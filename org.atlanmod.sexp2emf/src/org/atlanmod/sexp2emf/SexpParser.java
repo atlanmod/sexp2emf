@@ -108,7 +108,7 @@ public class SexpParser {
     return new Ref(id);
   }
 
-  private static Atom parseAtom(TokenStream t) {
+  private static Sexp parseAtom(TokenStream t) {
     String s = t.advance();
     switch (s.charAt(0)) {
     case '\'':
@@ -118,8 +118,15 @@ public class SexpParser {
       if (s.charAt(s.length() - 1) != open) {
         throw new ParseException("Unterminated string literal '%s'", s);
       }
-      StringAtom a = new StringAtom();
+      StringLiteral a = new StringLiteral();
       a.value = s.substring(1, s.length() - 1);
+      return a;
+    }
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+    case '-': {
+      IntLiteral a = new IntLiteral();
+      a.value = Integer.parseInt(s);
       return a;
     }
     default: {
@@ -138,16 +145,12 @@ public class SexpParser {
 
   public interface Visitor<T> {
     T onNode(Node n);
-
     T onCall(Call c);
-
     T onTarget(Target t);
-
     T onRef(Ref r);
-
     T onAtom(Atom a);
-
-    T onString(StringAtom stringAtom);
+    T onString(StringLiteral s);
+    T onInt(IntLiteral i);
   }
 
   public static class Node implements Sexp {
@@ -211,11 +214,23 @@ public class SexpParser {
     }
   }
 
-  public static class StringAtom extends Atom {
+  public static class StringLiteral implements Sexp {
+    String value;
+
     @Override
     public <T> T accept(Visitor<T> v) {
       return v.onString(this);
     }
+  }
+
+  public static class IntLiteral implements Sexp {
+    int value;
+
+    @Override
+    public <T> T accept(Visitor<T> v) {
+      return v.onInt(this);
+    }
+
   }
 
 }
