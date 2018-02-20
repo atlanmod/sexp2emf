@@ -16,17 +16,19 @@ public class TestSexp2EMF {
 
   @Test
   public void sample() {
-    String s = "(EPackage"
-        +      " :name 'package'"
-        +      " :nsURI 'http://package'"
-        +      " :nsPrefix 'package'"
-        +      " :eClassifiers [#1(EClass :name 'A'"
-        +                               " :eStructuralFeatures [(EAttribute :name 'attr' :eType EString)"
-        +                                                      "(EReference :name 'someB' :eType @2"
-        +                                                                 " :lowerBound 0 :upperBound 1)])"
-        +                      "#2(EClass :name 'B'"
-        +                               " :eStructuralFeatures [(EReference :name 'multipleA' :eType @1"
-        +                                                                 " :lowerBound 0 :upperBound -1)])])";
+    String s =
+      "(EPackage"
+     +" :name 'package'"
+     +" :nsURI 'http://package'"
+     +" :nsPrefix 'package'"
+     +" :eClassifiers ["
+     +   "#1(EClass :name 'A'"
+     +            " :eStructuralFeatures [(EAttribute :name 'attr' :eType EString)"
+     +                                   "(EReference :name 'someB' :eType @2"
+     +                                               " :lowerBound 0 :upperBound 1)])"
+     +   "#2(EClass :name 'B'"
+     +            " :eStructuralFeatures [(EReference :name 'multipleA' :eType @1"
+     +                                              " :lowerBound 0 :upperBound -1)])])";
 
     EObject[] objs = Sexp2EMF.build(s, EcoreFactory.eINSTANCE);
 
