@@ -48,7 +48,7 @@ public class SexpParser {
     // @Correctness: parens (or brackets) that appear in a string will break this
     // also spaces in string will break!
     List<String> tokens = new ArrayList<>();
-    for (String s : source.replaceAll("([\\(\\)\\[\\]])", " $1 ").split(" ")) {
+    for (String s : source.replaceAll("([\\(\\)\\[\\]])", " $1 ").split("\\s")) {
       if (s.length() > 0) {
         tokens.add(s);
       }
