@@ -5,7 +5,6 @@ Bundle-SymbolicName: org.atlanmod.sexp2emf
 Bundle-Version: 0.1.0.qualifier
 Bundle-Vendor: Atlanmod
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
-Require-Bundle: fr.inria.atlanmod.emfviews.virtuallinks;bundle-version="0.3.0",
- org.eclipse.emf.common;bundle-version="[2.13.0,3.0.0)",
+Require-Bundle: org.eclipse.emf.common;bundle-version="[2.13.0,3.0.0)",
  org.eclipse.emf.ecore;bundle-version="[2.13.0,3.0.0)"
 Export-Package: org.atlanmod.sexp2emf

@@ -7,16 +7,23 @@ import java.util.Map;
 
 import org.atlanmod.sexp2emf.SexpParser.Atom;
 import org.atlanmod.sexp2emf.SexpParser.Call;
+import org.atlanmod.sexp2emf.SexpParser.IntLiteral;
 import org.atlanmod.sexp2emf.SexpParser.Node;
 import org.atlanmod.sexp2emf.SexpParser.Ref;
 import org.atlanmod.sexp2emf.SexpParser.Sexp;
-import org.atlanmod.sexp2emf.SexpParser.StringAtom;
+import org.atlanmod.sexp2emf.SexpParser.StringLiteral;
 import org.atlanmod.sexp2emf.SexpParser.Target;
 import org.atlanmod.sexp2emf.SexpParser.Visitor;
 import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.ecore.EClassifier;
+import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EFactory;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.emf.ecore.EcoreFactory;
+import org.eclipse.emf.ecore.EcorePackage;
+import org.eclipse.emf.ecore.impl.EcorePackageImpl;
 
 public class EMFBuilder implements Visitor<Void> {
 
@@ -58,7 +65,12 @@ public class EMFBuilder implements Visitor<Void> {
   }
 
   @Override
-  public Void onString(StringAtom s) {
+  public Void onString(StringLiteral s) {
+    return null;
+  }
+
+  @Override
+  public Void onInt(IntLiteral i) {
     return null;
   }
 
@@ -144,8 +156,20 @@ public class EMFBuilder implements Visitor<Void> {
   }
 
   static private Object value(Sexp s, Map<Integer, EObject> targets, Map<Call, EObject> callsToObjs) {
+    // @Refactor: if this was a visitor, it could statically fail on new added AST node types
     if (s instanceof Atom) {
-      return ((Atom) s).value;
+      // Atoms refer to built-in Ecore classifiers.  Maybe there is a more generic syntax we could
+      // use for datatypes or Ecore built-ins?
+      String name = ((Atom) s).value;
+      EClassifier c = EcorePackage.eINSTANCE.getEClassifier(name);
+      if (c == null) {
+        throw new CompileException("Unknown classifier '%s'", name);
+      }
+      return c;
+    } else if (s instanceof StringLiteral) {
+      return ((StringLiteral) s).value;
+    } else if (s instanceof IntLiteral) {
+      return ((IntLiteral) s).value;
     } else if (s instanceof Ref) {
       return targets.get(((Ref) s).id);
     } else if (s instanceof Call) {
