@@ -131,7 +131,7 @@ public class EMFBuilder implements Visitor<Void> {
         if (val instanceof Object[]) {
           Object list = o.eGet(feature);
           if (!(list instanceof EList)) {
-            throw new CompileException("");
+            throw new CompileException("Feature %s should be a list", featureName);
           }
 
           EList<Object> l = ((EList<Object>) list);
