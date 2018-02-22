@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.atlanmod.sexp2emf.SexpParser.Atom;
+import org.atlanmod.sexp2emf.SexpParser.BoolLiteral;
 import org.atlanmod.sexp2emf.SexpParser.Call;
 import org.atlanmod.sexp2emf.SexpParser.IntLiteral;
 import org.atlanmod.sexp2emf.SexpParser.Node;
@@ -71,6 +72,11 @@ public class EMFBuilder implements Visitor<Void> {
 
   @Override
   public Void onInt(IntLiteral i) {
+    return null;
+  }
+
+  @Override
+  public Void onBool(BoolLiteral b) {
     return null;
   }
 
@@ -166,6 +172,8 @@ public class EMFBuilder implements Visitor<Void> {
         throw new CompileException("Unknown classifier '%s'", name);
       }
       return c;
+    } else if (s instanceof BoolLiteral) {
+      return ((BoolLiteral) s).value;
     } else if (s instanceof StringLiteral) {
       return ((StringLiteral) s).value;
     } else if (s instanceof IntLiteral) {

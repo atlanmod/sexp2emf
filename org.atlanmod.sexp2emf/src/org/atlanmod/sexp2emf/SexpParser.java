@@ -110,6 +110,20 @@ public class SexpParser {
 
   private static Sexp parseAtom(TokenStream t) {
     String s = t.advance();
+
+    switch (s) {
+    case "true": {
+      BoolLiteral a = new BoolLiteral();
+      a.value = true;
+      return a;
+    }
+    case "false": {
+      BoolLiteral a = new BoolLiteral();
+      a.value = false;
+      return a;
+    }
+    }
+
     switch (s.charAt(0)) {
     case '\'':
     case '"': {
@@ -151,6 +165,7 @@ public class SexpParser {
     T onAtom(Atom a);
     T onString(StringLiteral s);
     T onInt(IntLiteral i);
+    T onBool(BoolLiteral b);
   }
 
   public static class Node implements Sexp {
@@ -230,7 +245,15 @@ public class SexpParser {
     public <T> T accept(Visitor<T> v) {
       return v.onInt(this);
     }
+  }
 
+  public static class BoolLiteral implements Sexp {
+    boolean value;
+
+    @Override
+    public <T> T accept(Visitor<T> v) {
+      return v.onBool(this);
+    }
   }
 
 }
