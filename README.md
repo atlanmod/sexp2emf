@@ -1,5 +1,7 @@
 # sexp2emf
 
+[![Build Status](https://travis-ci.org/atlanmod/sexp2emf.svg?branch=master)](https://travis-ci.org/atlanmod/sexp2emf)
+
 Turns [S-expressions](https://en.wikipedia.org/wiki/S-expression) into a [EMF
 models](http://www.eclipse.org/modeling/emf/).
 
