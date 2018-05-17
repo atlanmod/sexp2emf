@@ -16,15 +16,12 @@ import org.atlanmod.sexp2emf.SexpParser.StringLiteral;
 import org.atlanmod.sexp2emf.SexpParser.Target;
 import org.atlanmod.sexp2emf.SexpParser.Visitor;
 import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EClassifier;
-import org.eclipse.emf.ecore.EDataType;
 import org.eclipse.emf.ecore.EFactory;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.EcorePackage;
-import org.eclipse.emf.ecore.impl.EcorePackageImpl;
 
 public class EMFBuilder implements Visitor<Void> {
 
@@ -87,18 +84,17 @@ public class EMFBuilder implements Visitor<Void> {
     // First create all classes, to allow for cycles
     for (Call c : calls) {
       String className = atomValue(c.children[0]);
-      String methodName = String.format("create%s", className);
       EObject o;
 
-      try {
-        // @Refactor maybe we can use some EMF provided reflection?
-        o = (EObject) factory.getClass().getMethod(methodName).invoke(factory);
-      } catch (Exception e) {
-        throw new CompileException("Cannot find constructor for class '%s' on factory %s",
-                                   className);
+      EClassifier ec = factory.getEPackage().getEClassifier(className);
+
+      if (ec instanceof EClass) {
+        o = factory.create((EClass) ec);
+      } else {
+        throw new CompileException("Classifier '%s' is not an EClass", className);
       }
 
-      // If this is targeted call, register the created object to the map
+      // If this is a targeted call, register the created object to the map
       if (targets.containsKey(c)) {
         runtimeTargets.put(targets.get(c), o);
       }

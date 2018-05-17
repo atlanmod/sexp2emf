@@ -1,9 +1,10 @@
 # sexp2emf
 
-Turns [S-expressions](https://en.wikipedia.org/wiki/S-expression) into an [EMF
+Turns [S-expressions](https://en.wikipedia.org/wiki/S-expression) into a [EMF
 models](http://www.eclipse.org/modeling/emf/).
 
-This is useful for building models from a readable (i.e., not XMI) text file.
+This is useful for building models from a readable (i.e., not XMI) text file or
+Java string.
 
 ## How to use
 

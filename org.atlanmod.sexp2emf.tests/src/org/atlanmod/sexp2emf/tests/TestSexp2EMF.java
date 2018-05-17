@@ -10,9 +10,15 @@ import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.EcorePackage;
 import org.eclipse.emf.ecore.util.EcoreUtil;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestSexp2EMF {
+
+  @BeforeClass
+  public static void setup() {
+    EcorePackage.eINSTANCE.eClass();
+  }
 
   @Test
   public void sample() {
@@ -29,6 +35,7 @@ public class TestSexp2EMF {
      +   "#2(EClass :name 'B'"
      +            " :eStructuralFeatures [(EReference :name 'multipleA' :eType @1"
      +                                              " :lowerBound 0 :upperBound -1)])])";
+
 
     EObject[] objs = Sexp2EMF.build(s, EcoreFactory.eINSTANCE);
 
@@ -69,5 +76,27 @@ public class TestSexp2EMF {
 
     // Test
     Assert.assertTrue(EcoreUtil.equals(p, objs[0]));
+  }
+
+  @Test
+  public void dynamic() {
+    // Create an EPackage dynamically, and use it to create models
+    String s =
+        "(EPackage"
+       +" :name 'package'"
+       +" :nsURI 'http://package'"
+       +" :eClassifiers [(EClass :name 'A')])";
+
+    EPackage P = (EPackage) Sexp2EMF.build(s, EcoreFactory.eINSTANCE)[0];
+
+    s = "[(A) (A)]";
+    EObject[] objs = Sexp2EMF.build(s, P.getEFactoryInstance());
+
+    // Expected result
+    EObject[] expected = {P.getEFactoryInstance().create((EClass) P.getEClassifier("A")),
+                          P.getEFactoryInstance().create((EClass) P.getEClassifier("A"))};
+
+    Assert.assertTrue(EcoreUtil.equals(expected[0], objs[0]));
+    Assert.assertTrue(EcoreUtil.equals(expected[1], objs[1]));
   }
 }
