@@ -1,0 +1,6 @@
+sudo: false
+language: java
+jdk: openjdk8
+
+script:
+  - mvn --show-version --batch-mode -Dmaven.javadoc.skip=true integration-test
