@@ -18,12 +18,12 @@ String sexp =
  +" :nsURI 'http://package'"
  +" :nsPrefix 'package'"
  +" :eClassifiers ["
- +   "#1(EClass :name 'A'"
+ +   "#A(EClass :name 'A'"
  +            " :eStructuralFeatures [(EAttribute :name 'attr' :eType EString)"
- +                                   "(EReference :name 'someB' :eType @2"
+ +                                   "(EReference :name 'someB' :eType @B"
  +                                               " :lowerBound 0 :upperBound 1)])"
- +   "#2(EClass :name 'B'"
- +            " :eStructuralFeatures [(EReference :name 'multipleA' :eType @1"
+ +   "#B(EClass :name 'B'"
+ +            " :eStructuralFeatures [(EReference :name 'multipleA' :eType @A"
  +                                              " :lowerBound 0 :upperBound -1)])])";
 
 // Build the model

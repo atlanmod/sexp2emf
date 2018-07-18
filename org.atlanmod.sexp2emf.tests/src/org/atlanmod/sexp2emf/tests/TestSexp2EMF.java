@@ -1,5 +1,7 @@
 package org.atlanmod.sexp2emf.tests;
 
+import java.util.Arrays;
+
 import org.atlanmod.sexp2emf.Sexp2EMF;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
@@ -98,5 +100,21 @@ public class TestSexp2EMF {
 
     Assert.assertTrue(EcoreUtil.equals(expected[0], objs[0]));
     Assert.assertTrue(EcoreUtil.equals(expected[1], objs[1]));
+  }
+
+  @Test
+  public void namedTargets() {
+    // Targets can be full words
+
+    String s =
+        "(EPackage :name 'P'"
+      + ":eClassifiers [ #alfred  (EClass :name 'A')"
+      + "                #bernard (EClass :name 'B' :eSuperTypes [@alfred]) ])";
+
+    EObject[] objs = Sexp2EMF.build(s, EcoreFactory.eINSTANCE);
+    EClass A = (EClass) objs[1];
+    EClass B = (EClass) objs[2];
+
+    Assert.assertEquals(Arrays.asList(A), B.getESuperTypes());
   }
 }

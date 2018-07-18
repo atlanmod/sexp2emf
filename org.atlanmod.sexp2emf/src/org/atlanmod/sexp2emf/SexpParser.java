@@ -1,37 +1,233 @@
 package org.atlanmod.sexp2emf;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public class SexpParser {
 
-  static private class TokenStream {
-    private String[] tokens;
-    private int index;
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Scanner
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    TokenStream(String[] tokens) {
-      this.tokens = tokens;
-      index = 0;
+  static private class CharStream {
+    final String input;
+    int index;
+
+    CharStream(String input) {
+      this.input = input;
+      this.index = 0;
     }
 
     boolean eof() {
-      return index >= tokens.length;
+      return index >= input.length();
     }
 
-    String peek() {
-      return tokens[index];
+    char peek() {
+      return input.charAt(index);
     }
 
-    String advance() {
-      return tokens[index++];
+    char next() {
+      return input.charAt(index++);
     }
 
-    void expect(String s) {
-      String t = advance();
-      if (!t.equals(s)) {
-        throw new ParseException("Expected '%s', got '%s'", s, t);
+    void expect(char c) {
+      if (eof()) {
+        throw new ParseException("Expected '%c', got end of input", c);
       }
+
+      char a = next();
+      if (a != c) {
+        throw new ParseException("Expected '%c', got '%c'", c, a);
+      }
+    }
+  }
+
+  static private enum TokenType {
+    EOF,
+    LeftParen,
+    RightParen,
+    LeftBracket,
+    RightBracket,
+    Pound,
+    At,
+    Number,
+    Keyword,
+    Word,
+    String,
+  }
+
+  static private enum Keyword {
+    True,
+    False,
+  }
+
+  static final Map<String, Keyword> keywords;
+  static {
+    keywords = new HashMap<>();
+    keywords.put("true",  Keyword.True);
+    keywords.put("false", Keyword.False);
+  }
+
+  static private class Token {
+    final TokenType type;
+    final Object literal;
+
+    Token(TokenType type, Object literal) {
+      this.type = type;
+      this.literal = literal;
+    }
+
+  }
+
+  static private class TokenStream {
+    final CharStream input;
+    Token current;
+
+    TokenStream(CharStream input) {
+      this.input = input;
+    }
+
+    boolean eof() {
+      return peek().type == TokenType.EOF;
+    }
+
+    Token peek() {
+      if (current == null) {
+        current = advance();
+      }
+      return current;
+    }
+
+    Token next() {
+      if (current != null) {
+        Token r = current;
+        current = null;
+        return r;
+      } else {
+        return advance();
+      }
+    }
+
+    void eatSpace() {
+      while (!input.eof()) {
+        char c = input.peek();
+        if (c == ' ' || c == '\n' || c == '\t') {
+          input.next();
+        } else {
+          break;
+        }
+      }
+    }
+
+    Token readWord() {
+      StringBuilder w = new StringBuilder();
+
+      while (!input.eof()) {
+        char c = input.peek();
+        if (c == '(' || c == ')' ||
+            c == '[' || c == ']' ||
+            c == '#' || c == '@' ||
+            c == '\'' ||
+            c == '"' || c == '\n' ||
+            c == ' ' || c == '\t') {
+          break;
+        } else {
+          w.append(input.next());
+        }
+      }
+
+      String word = w.toString();
+      if (keywords.containsKey(word)) {
+        return emit(TokenType.Keyword, keywords.get(word));
+      } else {
+        return emit(TokenType.Word, w.toString());
+      }
+    }
+
+    Token readNumber() {
+      StringBuilder w = new StringBuilder();
+
+      if (input.peek() == '-') {
+        w.append(input.next());
+      }
+
+      while (!input.eof()) {
+        char c = input.peek();
+        if (c >= '0' && c <= '9') {
+          w.append(input.next());
+        } else {
+          break;
+        }
+      }
+
+      return emit(TokenType.Number, Integer.parseInt(w.toString(), 10));
+    }
+
+    Token readString(char delimiter) {
+      input.expect(delimiter);
+
+      StringBuilder s = new StringBuilder();
+
+      while (!input.eof()) {
+        char c = input.peek();
+        if (c == delimiter) {
+          break;
+        } else {
+          s.append(input.next());
+        }
+      }
+
+      input.expect(delimiter);
+
+      return emit(TokenType.String, s.toString());
+    }
+
+    Token advance() {
+      eatSpace();
+
+      if (input.eof()) {
+        return emit(TokenType.EOF);
+      }
+
+      switch (input.peek()) {
+      case '(':  input.next(); return emit(TokenType.LeftParen);
+      case ')':  input.next(); return emit(TokenType.RightParen);
+      case '[':  input.next(); return emit(TokenType.LeftBracket);
+      case ']':  input.next(); return emit(TokenType.RightBracket);
+      case '#':  input.next(); return emit(TokenType.Pound);
+      case '@':  input.next(); return emit(TokenType.At);
+      case '"':  return readString('"');
+      case '\'': return readString('\'');
+      case '-':
+      case '0': case '1': case '2': case '3': case '4':
+      case '5': case '6': case '7': case '8': case '9':
+        return readNumber();
+      default:   return readWord();
+      }
+    }
+
+    Token emit(TokenType type) {
+      return emit(type, null);
+    }
+
+    Token emit(TokenType type, Object literal) {
+      return new Token(type, literal);
+    }
+
+    Token expect(TokenType type) {
+      if (eof()) {
+        throw new ParseException("Expected '%s', got end of input", type);
+      }
+
+      Token t = next();
+      if (t.type != type) {
+        throw new ParseException("Expected '%s', got '%s'", type, t.type);
+      }
+
+      return t;
     }
   }
 
@@ -43,44 +239,40 @@ public class SexpParser {
     }
   }
 
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Parser
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   public static Sexp parse(String source) {
-    // Tokenize
-    // @Correctness: parens (or brackets) that appear in a string will break this
-    // also spaces in string will break!
-    List<String> tokens = new ArrayList<>();
-    for (String s : source.replaceAll("([()\\[\\]])", " $1 ").split("\\s")) {
-      if (s.length() > 0) {
-        tokens.add(s);
-      }
-    }
-    TokenStream t = new TokenStream(tokens.toArray(new String[0]));
-
-    // Parse
-    return parseSexp(t);
+    return parseSexp(new TokenStream(new CharStream(source)));
   }
 
-  private static Sexp parseSexp(TokenStream t) {
-    switch (t.peek().charAt(0)) {
-    case '(':
-      return parseList(t, "(", ")", Call::new);
-    case '[':
-      return parseList(t, "[", "]", Node::new);
-    case '#':
-      return parseTarget(t);
-    case '@':
-      return parseRef(t);
+  private static Sexp parseSexp(TokenStream ts) {
+    switch (ts.peek().type) {
+    case LeftParen:
+      return parseList(ts, TokenType.LeftParen, TokenType.RightParen, Call::new);
+    case LeftBracket:
+      return parseList(ts, TokenType.LeftBracket, TokenType.RightBracket, Node::new);
+    case Pound:
+      return parseTarget(ts);
+    case At:
+      return parseRef(ts);
     default:
-      return parseAtom(t);
+      return parseAtom(ts);
     }
   }
 
-  private static Sexp parseList(TokenStream t, String open, String close,
+  private static Sexp parseList(TokenStream t, TokenType open, TokenType close,
                                 Function<Sexp[], Sexp> f) {
     t.expect(open);
 
     List<Sexp> children = new ArrayList<>();
-    while (!t.eof() && !t.peek().equals(close)) {
-      children.add(parseSexp(t));
+    while (!t.eof()) {
+      if (t.peek().type != close) {
+        children.add(parseSexp(t));
+      } else {
+        break;
+      }
     }
 
     t.expect(close);
@@ -88,66 +280,41 @@ public class SexpParser {
     return f.apply(children.toArray(new Sexp[0]));
   }
 
-  private static Target parseTarget(TokenStream t) {
-    String s = t.advance();
-    if (!s.startsWith("#")) {
-      throw new ParseException("Expected '#', got %s", s.charAt(0));
-    }
-
-    int id = Integer.parseInt(s.substring(1));
-    return new Target(id, parseSexp(t));
+  private static Target parseTarget(TokenStream ts) {
+    ts.expect(TokenType.Pound);
+    Object id = parseTargetIdentifier(ts);
+    return new Target(id, parseSexp(ts));
   }
 
-  private static Ref parseRef(TokenStream t) {
-    String s = t.advance();
-    if (!s.startsWith("@")) {
-      throw new ParseException("Expected '@', got %s", s.charAt(0));
-    }
-
-    int id = Integer.parseInt(s.substring(1));
+  private static Ref parseRef(TokenStream ts) {
+    ts.expect(TokenType.At);
+    Object id = parseTargetIdentifier(ts);
     return new Ref(id);
   }
 
-  private static Sexp parseAtom(TokenStream t) {
-    String s = t.advance();
+  private static Object parseTargetIdentifier(TokenStream ts) {
+    Token t = ts.next();
+    switch (t.type) {
+    case Number: case Word:
+      return t.literal;
+    default: throw new ParseException("Expected number or identifier, got '%s'", t.literal);
+    }
+  }
 
-    switch (s) {
-    case "true": {
-      BoolLiteral a = new BoolLiteral();
-      a.value = true;
-      return a;
-    }
-    case "false": {
-      BoolLiteral a = new BoolLiteral();
-      a.value = false;
-      return a;
-    }
-    }
+  private static Sexp parseAtom(TokenStream ts) {
+    Token t = ts.next();
 
-    switch (s.charAt(0)) {
-    case '\'':
-    case '"': {
-      char open = s.charAt(0);
-      // @Correctness: this should go into the tokenizer
-      if (s.charAt(s.length() - 1) != open) {
-        throw new ParseException("Unterminated string literal '%s'", s);
+    switch (t.type) {
+    case Keyword: {
+      switch ((Keyword) t.literal) {
+        case True:  return new BoolLiteral(true);
+        case False: return new BoolLiteral(false);
       }
-      StringLiteral a = new StringLiteral();
-      a.value = s.substring(1, s.length() - 1);
-      return a;
     }
-    case '0': case '1': case '2': case '3': case '4':
-    case '5': case '6': case '7': case '8': case '9':
-    case '-': {
-      IntLiteral a = new IntLiteral();
-      a.value = Integer.parseInt(s);
-      return a;
-    }
-    default: {
-      Atom a = new Atom();
-      a.value = s;
-      return a;
-    }
+
+    case String: return new StringLiteral((String) t.literal);
+    case Number: return new IntLiteral((int) t.literal);
+    default: return new Atom((String) t.literal);
     }
   }
 
@@ -169,7 +336,7 @@ public class SexpParser {
   }
 
   public static class Node implements Sexp {
-    Sexp[] children;
+    final Sexp[] children;
 
     Node(Sexp[] children) {
       this.children = children;
@@ -193,10 +360,10 @@ public class SexpParser {
   }
 
   public static class Target implements Sexp {
-    int id;
-    Sexp sexp;
+    final Object id;
+    final Sexp sexp;
 
-    Target(int id, Sexp sexp) {
+    Target(Object id, Sexp sexp) {
       this.id = id;
       this.sexp = sexp;
     }
@@ -208,9 +375,9 @@ public class SexpParser {
   }
 
   public static class Ref implements Sexp {
-    int id;
+    final Object id;
 
-    Ref(int id) {
+    Ref(Object id) {
       this.id = id;
     }
 
@@ -221,7 +388,11 @@ public class SexpParser {
   }
 
   public static class Atom implements Sexp {
-    String value;
+    final String value;
+
+    Atom(String value) {
+      this.value = value;
+    }
 
     @Override
     public <T> T accept(Visitor<T> v) {
@@ -230,7 +401,11 @@ public class SexpParser {
   }
 
   public static class StringLiteral implements Sexp {
-    String value;
+    final String value;
+
+    StringLiteral(String value) {
+      this.value = value;
+    }
 
     @Override
     public <T> T accept(Visitor<T> v) {
@@ -239,7 +414,11 @@ public class SexpParser {
   }
 
   public static class IntLiteral implements Sexp {
-    int value;
+    final int value;
+
+    IntLiteral(int i) {
+      value = i;
+    }
 
     @Override
     public <T> T accept(Visitor<T> v) {
@@ -248,7 +427,11 @@ public class SexpParser {
   }
 
   public static class BoolLiteral implements Sexp {
-    boolean value;
+    final boolean value;
+
+    BoolLiteral(boolean b) {
+      value = b;
+    }
 
     @Override
     public <T> T accept(Visitor<T> v) {

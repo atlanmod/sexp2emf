@@ -26,7 +26,7 @@ import org.eclipse.emf.ecore.EcorePackage;
 public class EMFBuilder implements Visitor<Void> {
 
   List<Call> calls = new ArrayList<>();
-  Map<Sexp, Integer> targets = new HashMap<>();
+  Map<Sexp, Object> targets = new HashMap<>();
 
   @Override
   public Void onNode(Node n) {
@@ -79,7 +79,7 @@ public class EMFBuilder implements Visitor<Void> {
 
   public EObject[] build(EFactory factory) {
     Map<Call, EObject> objs = new HashMap<>();
-    Map<Integer, EObject> runtimeTargets = new HashMap<>();
+    Map<Object, EObject> runtimeTargets = new HashMap<>();
 
     // First create all classes, to allow for cycles
     for (Call c : calls) {
@@ -157,7 +157,7 @@ public class EMFBuilder implements Visitor<Void> {
     }
   }
 
-  static private Object value(Sexp s, Map<Integer, EObject> targets, Map<Call, EObject> callsToObjs) {
+  static private Object value(Sexp s, Map<Object, EObject> targets, Map<Call, EObject> callsToObjs) {
     // @Refactor: if this was a visitor, it could statically fail on new added AST node types
     if (s instanceof Atom) {
       // Atoms refer to built-in Ecore classifiers.  Maybe there is a more generic syntax we could
