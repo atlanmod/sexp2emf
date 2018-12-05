@@ -8,6 +8,15 @@ models](http://www.eclipse.org/modeling/emf/).
 This is useful for building models from a readable (i.e., not XMI) text file or
 Java string.
 
+## How to install
+Install with [Maven](https://maven.apache.org/):
+
+```sh
+$ git clone https://github.com/atlanmod/sexp2emf.git
+$ cd sepx2emf
+$ mvn install
+```
+
 ## How to use
 
 ```java
