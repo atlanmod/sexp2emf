@@ -130,6 +130,7 @@ public class EMFBuilder implements Visitor<Void> {
             throw new CompileException("Feature %s should be a list", featureName);
           }
 
+          @SuppressWarnings("unchecked")
           EList<Object> l = ((EList<Object>) list);
           for (Object v : (Object[]) val) {
             l.add(v);
@@ -157,39 +158,70 @@ public class EMFBuilder implements Visitor<Void> {
     }
   }
 
-  static private Object value(Sexp s, Map<Object, EObject> targets, Map<Call, EObject> callsToObjs) {
-    // @Refactor: if this was a visitor, it could statically fail on new added AST node types
-    if (s instanceof Atom) {
-      // Atoms refer to built-in Ecore classifiers.  Maybe there is a more generic syntax we could
-      // use for datatypes or Ecore built-ins?
-      String name = ((Atom) s).value;
-      EClassifier c = EcorePackage.eINSTANCE.getEClassifier(name);
-      if (c == null) {
-        throw new CompileException("Unknown classifier '%s'", name);
-      }
-      return c;
-    } else if (s instanceof BoolLiteral) {
-      return ((BoolLiteral) s).value;
-    } else if (s instanceof StringLiteral) {
-      return ((StringLiteral) s).value;
-    } else if (s instanceof IntLiteral) {
-      return ((IntLiteral) s).value;
-    } else if (s instanceof Ref) {
-      return targets.get(((Ref) s).id);
-    } else if (s instanceof Call) {
-      return callsToObjs.get(s);
-    } else if (s instanceof Node) {
-      Node n = (Node) s;
+  private Object value(Sexp s, Map<Object, EObject> targets, Map<Call, EObject> callsToObjs) {
+    return s.accept(this.new ValueVisitor(targets, callsToObjs));
+  }
+
+  private class ValueVisitor implements Visitor<Object> {
+    Map<Object, EObject> targets;
+    Map<Call, EObject> callsToObjs;
+
+    ValueVisitor(Map<Object, EObject> targets, Map<Call, EObject> callsToObjs) {
+      this.targets = targets;
+      this.callsToObjs = callsToObjs;
+    }
+
+    @Override
+    public Object onNode(Node n) {
       Object[] v = new Object[n.children.length];
       for (int i = 0; i < n.children.length; ++i) {
         v[i] = value(n.children[i], targets, callsToObjs);
       }
       return v;
-    } else if (s instanceof Target) {
-      return value(((Target) s).sexp, targets, callsToObjs);
-    } else {
-      throw new CompileException("Cannot value '%s'", s);
     }
+
+    @Override
+    public Object onCall(Call c) {
+      return callsToObjs.get(c);
+    }
+
+    @Override
+    public Object onTarget(Target t) {
+      return t.sexp.accept(this);
+    }
+
+    @Override
+    public Object onRef(Ref r) {
+      return targets.get(r.id);
+    }
+
+    @Override
+    public Object onAtom(Atom a) {
+      // Atoms refer to built-in Ecore classifiers.  Maybe there is a more generic syntax we could
+      // use for datatypes or Ecore built-ins?
+      String name = a.value;
+      EClassifier c = EcorePackage.eINSTANCE.getEClassifier(name);
+      if (c == null) {
+        throw new CompileException("Unknown classifier '%s'", name);
+      }
+      return c;
+    }
+
+    @Override
+    public Object onString(StringLiteral s) {
+      return s.value;
+    }
+
+    @Override
+    public Object onInt(IntLiteral i) {
+      return i.value;
+    }
+
+    @Override
+    public Object onBool(BoolLiteral b) {
+      return b.value;
+    }
+
   }
 
   static class CompileException extends RuntimeException {
