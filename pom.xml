@@ -15,7 +15,7 @@
   </modules>
 
   <properties>
-    <tycho-version>1.1.0</tycho-version>
+    <tycho-version>2.6.0</tycho-version>
     <eclipse-oxygen>http://download.eclipse.org/releases/oxygen/201712201001</eclipse-oxygen>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
